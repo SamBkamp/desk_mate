@@ -1,7 +1,10 @@
- #include <screen_io.h>
+#include <screen_io.h>
 #include "WifiCredentials.h"
 #include <TimeLib.h>
 #include <WiFi.h>
+
+#define RETRIES_MAX 30
+
 WiFiClient client; //yucky OOP
 int port = 8080;
 
@@ -35,11 +38,15 @@ void make_req(char* endpoint){
   int res; //connection result
   res = client.connect(base, port);
   if(res){
+    uint8_t retries = 0; //client available retries
     screen_put_string("success!");
     client.println(endpoint);
-    while(!client.available()){ //check if ready to recieve bytes TODO: create an auto stop
+    while(!client.available() && retries < RETRIES_MAX){ //check if ready to recieve bytes TODO: create an auto stop
       delay(20);
+      retries++;
     }
+    if(retries >= RETRIES_MAX)
+      return;
     int index = 0;
     char construction[13];
     while(client.available()){
