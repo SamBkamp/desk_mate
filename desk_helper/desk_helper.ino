@@ -21,79 +21,87 @@ char *dow[] = {"Sunday",
 };
 
 
-void make_req(char* endpoint){
-  int pre_connection = 0;
-  if(WiFi.status() != WL_CONNECTED){
-    digitalWrite(D10, HIGH);
-    pre_connection = 1;
-    clear_display();
-    screen_put_string("Connecting");
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    while (WiFi.status() != WL_CONNECTED){
-      delay(700);
-    }
-    clear_display();
-  }
-  IPAddress base(192,168,50,196);
-  int res; //connection result
-  res = client.connect(base, port);
-  if(res){
-    uint8_t retries = 0; //client available retries
-    screen_put_string("success!");
-    client.println(endpoint);
-    while(!client.available() && retries < RETRIES_MAX){ //check if ready to recieve bytes TODO: create an auto stop
-      delay(20);
-      retries++;
-    }
-    if(retries >= RETRIES_MAX)
-      return;
-    int index = 0;
-    char construction[13];
-    while(client.available()){
-      construction[index++] = client.read();
-    }
-    client.flush();
-    client.stop();
-    construction[index] = 0;
-    if(strcmp(endpoint, "HIII")==0){
-      setTime(strtoul(construction, NULL, 10));
-    }else{
-      strcpy(gold, construction);
-    }
-    clear_display();
-  }else{
-    screen_put_string("failed!");
-    delay(2000);
-    clear_display();
-  }
-  if(pre_connection == 1){
-    digitalWrite(D10, LOW);
-    WiFi.disconnect();
-  } //only disconnect wifi if this function connected it
-
-}
-
-
-void setup() {
-  pinMode(D10, OUTPUT); //wifi LED
-  digitalWrite(D10, LOW);
-  pin_init();
-  function_set();
-  display_init(1, 0, 0);
-  entry_mode(1, 0);
-
-  setTime(0);
+void connect_wifi(){
+  digitalWrite(D10, HIGH);
   clear_display();
   screen_put_string("Connecting");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED){
     delay(700);
   }
-  digitalWrite(D10, HIGH); //set wifi LED
   clear_display();
-  screen_put_string("Connected!");
-  delay(500);
+}
+
+void make_req(char* endpoint){
+  int pre_connection = 0;
+  if(WiFi.status() != WL_CONNECTED){ //connect to wifi if not already
+    pre_connection = 1;
+    connect_wifi();
+  }
+
+  IPAddress base(192,168,50,196);
+  if(!client.connect(base, port)){ //if cannot connect to server
+    WiFi.disconnect();
+    digitalWrite(D10, LOW);
+    return;
+  }
+
+  uint8_t retries = 0; //client.available retries
+  screen_put_string("success!");
+  client.println(endpoint); //send endpoint data to server
+  while(!client.available() && retries < RETRIES_MAX){ //check if ready to recieve bytes
+    delay(20);
+    retries++;
+  }
+  if(retries >= RETRIES_MAX){ //client.available timeout
+    client.stop();
+    if(pre_connection == 1){
+      digitalWrite(D10, LOW);
+      WiFi.disconnect();
+    } //only disconnect wifi if this function connected it
+    return;
+  }
+
+  uint8_t index = 0;
+  char construction[13];
+  while(client.available() && index < 13)
+    construction[index++] = client.read(); //read all the data from server
+
+  client.flush();
+  client.stop();
+  construction[index] = 0;
+  if(strcmp(endpoint, "HIII")==0){
+    setTime(strtoul(construction, NULL, 10));
+  }else{
+    strcpy(gold, construction);
+  }
   clear_display();
+
+  if(pre_connection == 1){
+    digitalWrite(D10, LOW);
+    WiFi.disconnect();
+  } //only disconnect wifi if this function connected it
+}
+
+
+void init_lcd_screen(){
+  pin_init(); //screen pin init
+  function_set(); //screen function set
+  display_init(1, 0, 0); //screen display init
+  entry_mode(1, 0); //screen set entry mode
+}
+
+
+
+void setup() {
+  pinMode(D10, OUTPUT); //wifi LED
+  digitalWrite(D10, LOW);
+  init_lcd_screen();
+
+  setTime(0);
+  clear_display();
+
+  connect_wifi(); //keep singular wifi connection open for inital data requests
   make_req("HIII");
   delay(500);
   make_req("/gold");
@@ -104,6 +112,7 @@ void setup() {
 }
 
 void loop() {
+  //print date time
   clear_display();
   time_t t = now();
   sprintf(buff, "%s %d:%02d", dow[weekday(t)-1], hour(t), minute(t));
@@ -113,15 +122,16 @@ void loop() {
   screen_put_string(buff);
 
   delay(7000);
+
+  //print gold quotes
   if(data_requests > 90){
     make_req("/gold");
     data_requests = 0;
   }
   data_requests++;
   clear_display();
-  screen_put_string("GOLD:");
-  set_cursor(0, 1);
-  sprintf(buff, "$%s", gold);
+  sprintf(buff, "GOLD: $%s", gold);
   screen_put_string(buff);
+
   delay(7000);
 }
