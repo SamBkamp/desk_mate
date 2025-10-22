@@ -136,12 +136,36 @@ void loop() {
 
   //print gold quotes
   if(data_requests > 90){
-    make_req("/gold");
+    make_req("/gold", 0);
     data_requests = 0;
   }
   data_requests++;
   clear_display();
-  sprintf(buff, "GOLD: $%s", gold);
+  sprintf(buff, "%s", gold);
+  screen_put_string(buff);
+
+  delay(7000);
+
+  //print stock quotes
+  if(data_requests > 90){
+    make_req("/q", 0);
+    data_requests = 0;
+  }
+  data_requests++;
+  char* delim = tem;
+  while(*delim != '\n' && *delim != 0)
+    delim++;
+
+  if(*delim == '\n'){
+    *delim = 0; //set newline to null terminator
+    delim++; //delim points to second string
+  }//if delim reached end of string, leave it pointing there
+
+  clear_display();
+  sprintf(buff, "%s", tem);
+  screen_put_string(buff);
+  set_cursor(0, 1);
+  sprintf(buff, "%s", delim);
   screen_put_string(buff);
 
   delay(7000);
