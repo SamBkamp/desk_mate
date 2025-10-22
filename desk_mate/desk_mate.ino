@@ -10,7 +10,8 @@ int port = 8080;
 
 int data_requests = 0;
 char buff[64];
-char gold[30];
+char gold[64];
+char tem[64];
 char *dow[] = {"Sunday",
 	      "Monday",
 	      "Tuesday",
@@ -21,6 +22,15 @@ char *dow[] = {"Sunday",
 };
 
 
+void blink(){
+  for(int i = 0; i < 10; i++){
+    digitalWrite(D10, HIGH);
+    delay(200);
+    digitalWrite(D10, LOW);
+    delay(200);
+  }
+}
+
 void connect_wifi(){
   digitalWrite(D10, HIGH);
   clear_display();
@@ -30,29 +40,30 @@ void connect_wifi(){
     delay(700);
   }
   clear_display();
+  screen_put_string("connected!");
 }
 
-void make_req(char* endpoint){
-  int pre_connection = 0;
-  if(WiFi.status() != WL_CONNECTED){ //connect to wifi if not already
-    pre_connection = 1;
+void make_req(char* endpoint, int pre_connection){
+  if(pre_connection == 0){ //connect to wifi if not already
     connect_wifi();
   }
-
   IPAddress base(192,168,50,196);
   if(!client.connect(base, port)){ //if cannot connect to server
-    WiFi.disconnect();
-    digitalWrite(D10, LOW);
+    blink();
+    if(pre_connection == 0){
+      WiFi.disconnect();
+      digitalWrite(D10, LOW);
+    }
     return;
   }
 
   uint8_t retries = 0; //client.available retries
-  screen_put_string("success!");
   client.println(endpoint); //send endpoint data to server
   while(!client.available() && retries < RETRIES_MAX){ //check if ready to recieve bytes
     delay(20);
     retries++;
   }
+
   if(retries >= RETRIES_MAX){ //client.available timeout
     client.stop();
     if(pre_connection == 1){
@@ -63,8 +74,8 @@ void make_req(char* endpoint){
   }
 
   uint8_t index = 0;
-  char construction[13];
-  while(client.available() && index < 13)
+  char construction[64];
+  while(client.available() && index < 64)
     construction[index++] = client.read(); //read all the data from server
 
   client.flush();
@@ -72,17 +83,17 @@ void make_req(char* endpoint){
   construction[index] = 0;
   if(strcmp(endpoint, "HIII")==0){
     setTime(strtoul(construction, NULL, 10));
+  }else if(strcmp(endpoint, "/gold") == 0){
+    strncpy(gold, construction, 64);
   }else{
-    strcpy(gold, construction);
+    strncpy(tem, construction, 64);
   }
-  clear_display();
 
-  if(pre_connection == 1){
+  if(pre_connection == 0){
     digitalWrite(D10, LOW);
     WiFi.disconnect();
   } //only disconnect wifi if this function connected it
 }
-
 
 void init_lcd_screen(){
   pin_init(); //screen pin init
@@ -91,9 +102,8 @@ void init_lcd_screen(){
   entry_mode(1, 0); //screen set entry mode
 }
 
-
-
 void setup() {
+  strncpy(gold, "N/A", 4);
   pinMode(D10, OUTPUT); //wifi LED
   digitalWrite(D10, LOW);
   init_lcd_screen();
@@ -102,10 +112,11 @@ void setup() {
   clear_display();
 
   connect_wifi(); //keep singular wifi connection open for inital data requests
-  make_req("HIII");
+  make_req("HIII", 1);
   delay(500);
-  make_req("/gold");
+  make_req("/gold", 1);
   delay(500);
+  make_req("/q", 1);
   WiFi.disconnect();
   digitalWrite(D10, LOW);
   //unset wifi LED
