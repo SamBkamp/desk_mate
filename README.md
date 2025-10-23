@@ -33,3 +33,8 @@ You can change the LCD/Arduino pin mappings at the top of `screen_io.c`. There i
 ### Power
 
 I am running this circuit at 7.5v. In my experience, 5v and even 6v supplies risk a brownout when powering both the LCD and the WiFi functionality. I'm not an engineer but I bet you could get away with 5/6v if you stick a capacitor between Vdd and Vss.
+
+
+### Software
+
+The arduino is pretty dumb software wise. It takes 2 types of data from a server. One is a unix timestamp, which it uses to update its clock. It expects a string representation of the unix timestamp which it then converts to a long and passes to the Time library. Other than that, it takes a string which it displays on the screen. It interprets the first linebreak ('\n') as a "linebreak" and prints everything preceding to the top line and everything after to the bottom line. It also 'caches' data from each request (IE, it only makes new requests after x cycles through the loop function). This makes it very customizeable if you write your own server. 
