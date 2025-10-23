@@ -1,17 +1,15 @@
 #include <screen_io.h>
 #include "WifiCredentials.h"
+#include "helpers.h"
 #include <TimeLib.h>
 #include <WiFi.h>
 
 #define RETRIES_MAX 30
+#define PORT 8080
 
 WiFiClient client; //yucky OOP
-int port = 8080;
-
-int data_requests = 0;
+slide slides[2];
 char buff[64];
-char gold[64];
-char tem[64];
 char *dow[] = {"Sunday",
 	      "Monday",
 	      "Tuesday",
@@ -22,13 +20,18 @@ char *dow[] = {"Sunday",
 };
 
 
-void blink(){
-  for(int i = 0; i < 10; i++){
-    digitalWrite(D10, HIGH);
-    delay(200);
-    digitalWrite(D10, LOW);
-    delay(200);
-  }
+void format_slide(int slide_index, char* raw_data){
+  char* delim = raw_data;
+  while(*delim != '\n' && *delim != 0)
+    delim++;
+
+  if(*delim == '\n'){
+    *delim = 0; //set newline to null terminator
+    delim++; //delim points to second string
+  }//if delim reached end of string, leave it pointing there
+
+  sprintf(slides[slide_index].top_row, "%s", raw_data);
+  sprintf(slides[slide_index].bottom_row, "%s", delim);
 }
 
 void connect_wifi(){
@@ -48,7 +51,7 @@ void make_req(char* endpoint, int pre_connection){
     connect_wifi();
   }
   IPAddress base(192,168,50,196);
-  if(!client.connect(base, port)){ //if cannot connect to server
+  if(!client.connect(base, PORT)){ //if cannot connect to server
     blink();
     if(pre_connection == 0){
       WiFi.disconnect();
@@ -84,35 +87,35 @@ void make_req(char* endpoint, int pre_connection){
   if(strcmp(endpoint, "HIII")==0){
     setTime(strtoul(construction, NULL, 10));
   }else if(strcmp(endpoint, "/gold") == 0){
-    strncpy(gold, construction, 64);
+    format_slide(1, construction);
   }else{
-    strncpy(tem, construction, 64);
+    format_slide(0, construction);
   }
-
   if(pre_connection == 0){
     digitalWrite(D10, LOW);
     WiFi.disconnect();
   } //only disconnect wifi if this function connected it
 }
 
-void init_lcd_screen(){
-  pin_init(); //screen pin init
-  function_set(); //screen function set
-  display_init(1, 0, 0); //screen display init
-  entry_mode(1, 0); //screen set entry mode
-}
-
 void setup() {
-  strncpy(gold, "N/A", 4);
+  //init slides
+  slides[0].requests = 0;
+  *slides[0].top_row = 0;
+  *slides[0].bottom_row = 0;
+  slides[1].requests = 10; //stagger second slide
+  *slides[1].top_row = 0;
+  *slides[1].bottom_row = 0;
+
+  //init lcd and wifi led
   pinMode(D10, OUTPUT); //wifi LED
   digitalWrite(D10, LOW);
   init_lcd_screen();
-
-  setTime(0);
   clear_display();
 
+  setTime(0);
+
   connect_wifi(); //keep singular wifi connection open for inital data requests
-  make_req("HIII", 1);
+  make_req("HIII", 1); //time data
   delay(500);
   make_req("/gold", 1);
   delay(500);
@@ -135,38 +138,31 @@ void loop() {
   delay(7000);
 
   //print gold quotes
-  if(data_requests > 90){
+  if(slides[1].requests > 90){
     make_req("/gold", 0);
-    data_requests = 0;
+    slides[1].requests = 0;
   }
-  data_requests++;
-  clear_display();
-  sprintf(buff, "%s", gold);
+  slides[1].requests++;
+  strcpy(buff, slides[1].top_row);
+  screen_put_string(buff);
+  set_cursor(0, 1);
+  strcpy(buff, slides[1].bottom_row);
   screen_put_string(buff);
 
   delay(7000);
 
   //print stock quotes
-  if(data_requests > 90){
+  if(slides[0].requests > 60){
     make_req("/q", 0);
-    data_requests = 0;
+    slides[0].requests = 0;
   }
-  data_requests++;
-  char* delim = tem;
-  while(*delim != '\n' && *delim != 0)
-    delim++;
-
-  if(*delim == '\n'){
-    *delim = 0; //set newline to null terminator
-    delim++; //delim points to second string
-  }//if delim reached end of string, leave it pointing there
-
-  clear_display();
-  sprintf(buff, "%s", tem);
+  slides[0].requests++;
+  strcpy(buff, slides[0].top_row);
   screen_put_string(buff);
   set_cursor(0, 1);
-  sprintf(buff, "%s", delim);
+  strcpy(buff, slides[0].bottom_row);
   screen_put_string(buff);
+
 
   delay(7000);
 }
