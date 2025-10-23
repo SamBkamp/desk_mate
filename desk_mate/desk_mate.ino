@@ -143,6 +143,7 @@ void loop() {
     slides[1].requests = 0;
   }
   slides[1].requests++;
+  clear_display();
   strcpy(buff, slides[1].top_row);
   screen_put_string(buff);
   set_cursor(0, 1);
@@ -157,12 +158,12 @@ void loop() {
     slides[0].requests = 0;
   }
   slides[0].requests++;
+  clear_display();
   strcpy(buff, slides[0].top_row);
   screen_put_string(buff);
   set_cursor(0, 1);
   strcpy(buff, slides[0].bottom_row);
   screen_put_string(buff);
-
 
   delay(7000);
 }
