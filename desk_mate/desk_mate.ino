@@ -69,8 +69,8 @@ void make_req(char* endpoint, int pre_connection){
 
   if(retries >= RETRIES_MAX){ //client.available timeout
     client.stop();
-    if(pre_connection == 1){
-      digitalWrite(D10, LOW);
+    if(pre_connection == 0){
+      digitalWrite(WIFI_LED, LOW);
       WiFi.disconnect();
     } //only disconnect wifi if this function connected it
     return;
