@@ -6,6 +6,8 @@
 
 #define RETRIES_MAX 30
 #define PORT 8080
+#define WIFI_LED D10
+
 
 WiFiClient client; //yucky OOP
 slide slides[2];
@@ -35,7 +37,7 @@ void format_slide(int slide_index, char* raw_data){
 }
 
 void connect_wifi(){
-  digitalWrite(D10, HIGH);
+  digitalWrite(WIFI_LED, HIGH);
   clear_display();
   screen_put_string("Connecting");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -43,7 +45,7 @@ void connect_wifi(){
     delay(700);
   }
   clear_display();
-  screen_put_string("connected!");
+  screen_put_string("Connected!");
 }
 
 void make_req(char* endpoint, int pre_connection){
@@ -55,7 +57,7 @@ void make_req(char* endpoint, int pre_connection){
     blink();
     if(pre_connection == 0){
       WiFi.disconnect();
-      digitalWrite(D10, LOW);
+      digitalWrite(WIFI_LED, LOW);
     }
     return;
   }
@@ -92,7 +94,7 @@ void make_req(char* endpoint, int pre_connection){
     format_slide(0, construction);
   }
   if(pre_connection == 0){
-    digitalWrite(D10, LOW);
+    digitalWrite(WIFI_LED, LOW);
     WiFi.disconnect();
   } //only disconnect wifi if this function connected it
 }
@@ -107,8 +109,8 @@ void setup() {
   *slides[1].bottom_row = 0;
 
   //init lcd and wifi led
-  pinMode(D10, OUTPUT); //wifi LED
-  digitalWrite(D10, LOW);
+  pinMode(WIFI_LED, OUTPUT); //wifi LED
+  digitalWrite(WIFI_LED, LOW);
   init_lcd_screen();
   clear_display();
 
@@ -121,7 +123,7 @@ void setup() {
   delay(500);
   make_req("/q", 1);
   WiFi.disconnect();
-  digitalWrite(D10, LOW);
+  digitalWrite(WIFI_LED, LOW);
   //unset wifi LED
 }
 
