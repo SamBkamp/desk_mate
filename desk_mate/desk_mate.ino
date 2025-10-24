@@ -7,10 +7,10 @@
 #define RETRIES_MAX 30
 #define PORT 8080
 #define WIFI_LED D10
-
+#define SLIDES_SPACE 2
 
 WiFiClient client; //yucky OOP
-slide slides[2];
+slide slides[SLIDES_SPACE];
 char buff[64];
 char *dow[] = {"Sunday",
 	      "Monday",
@@ -37,13 +37,13 @@ void format_slide(int slide_index, char* raw_data){
 }
 
 void connect_wifi(){
-  digitalWrite(WIFI_LED, HIGH);
   clear_display();
   screen_put_string("Connecting");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED){
     delay(700);
   }
+  digitalWrite(WIFI_LED, HIGH);
   clear_display();
   screen_put_string("Connected!");
 }
@@ -101,10 +101,15 @@ void make_req(char* endpoint, int pre_connection){
 
 void setup() {
   //init slides
+  strcpy(slides[1].endpoint, "/q");
   slides[0].requests = 0;
+  slides[0].requests_max = 60;
   *slides[0].top_row = 0;
   *slides[0].bottom_row = 0;
+
+  strcpy(slides[1].endpoint, "/gold");
   slides[1].requests = 10; //stagger second slide
+  slides[1].requests_max = 90;
   *slides[1].top_row = 0;
   *slides[1].bottom_row = 0;
 

@@ -4,6 +4,8 @@
 
 typedef struct{
   uint8_t requests;
+  uint8_t requests_max;
+  char endpoint[32];
   char top_row[17];
   char bottom_row[17];
 }slide;
