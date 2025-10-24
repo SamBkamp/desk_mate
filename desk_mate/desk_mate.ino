@@ -144,33 +144,18 @@ void loop() {
 
   delay(7000);
 
-  //print gold quotes
-  if(slides[1].requests > 90){
-    make_req("/gold", 0);
-    slides[1].requests = 0;
+  for(int i = 0; i < SLIDES_SPACE; i++){
+    if(slides[i].requests > slides[i].requests_max){
+      make_req(slides[i].endpoint, 0);
+      slides[i].requests = 0;
+    }
+    slides[i].requests++;
+    clear_display();
+    strcpy(buff, slides[i].top_row);
+    screen_put_string(buff);
+    set_cursor(0, 1);
+    strcpy(buff, slides[i].bottom_row);
+    screen_put_string(buff);
+    delay(7000);
   }
-  slides[1].requests++;
-  clear_display();
-  strcpy(buff, slides[1].top_row);
-  screen_put_string(buff);
-  set_cursor(0, 1);
-  strcpy(buff, slides[1].bottom_row);
-  screen_put_string(buff);
-
-  delay(7000);
-
-  //print stock quotes
-  if(slides[0].requests > 60){
-    make_req("/q", 0);
-    slides[0].requests = 0;
-  }
-  slides[0].requests++;
-  clear_display();
-  strcpy(buff, slides[0].top_row);
-  screen_put_string(buff);
-  set_cursor(0, 1);
-  strcpy(buff, slides[0].bottom_row);
-  screen_put_string(buff);
-
-  delay(7000);
 }
